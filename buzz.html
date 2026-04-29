@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>IT Audit Jeopardy – Buzzer</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --blue-dark: #042C53;
+    --blue-mid: #185FA5;
+    --green: #3B6D11;
+    --green-bg: #EAF3DE;
+    --red: #A32D2D;
+    --red-bg: #FCEBEB;
+    --amber-bg: #FAEEDA;
+    --amber: #BA7517;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0a1628;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    text-align: center;
+    user-select: none;
+  }
+
+  #setup { width: 100%; max-width: 380px; }
+  #setup h1 { font-size: 22px; margin-bottom: 0.5rem; }
+  #setup p { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 1.5rem; }
+  .field-label { font-size: 13px; color: rgba(255,255,255,0.7); text-align: left; display: block; margin-bottom: 4px; }
+  input, select {
+    width: 100%; padding: 10px 14px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1);
+    color: #fff; font-size: 15px; margin-bottom: 1rem;
+  }
+  input::placeholder { color: rgba(255,255,255,0.4); }
+  select option { background: #1a2a40; color: #fff; }
+  .btn-join {
+    width: 100%; padding: 14px; background: var(--blue-mid); color: #fff;
+    border: none; border-radius: 10px; font-size: 16px; font-weight: 600;
+    cursor: pointer; margin-top: 0.5rem;
+  }
+  .btn-join:hover { background: #0C447C; }
+
+  #buzzer { display: none; width: 100%; max-width: 400px; flex-direction: column; align-items: center; gap: 1.5rem; }
+
+  .group-display {
+    font-size: 28px; font-weight: 700; letter-spacing: 1px;
+  }
+  .group-sub { font-size: 14px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+
+  .buzz-btn {
+    width: 220px; height: 220px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 38%, #2196f3, #185FA5 60%, #042C53);
+    border: 6px solid rgba(255,255,255,0.3);
+    color: #fff; font-size: 26px; font-weight: 800; letter-spacing: 2px;
+    cursor: pointer; transition: transform 0.1s, box-shadow 0.1s;
+    box-shadow: 0 8px 32px rgba(24,95,165,0.5);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 6px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .buzz-btn:active { transform: scale(0.93); box-shadow: 0 2px 12px rgba(24,95,165,0.4); }
+  .buzz-btn .buzz-icon { font-size: 36px; }
+  .buzz-btn.locked { background: radial-gradient(circle at 40% 38%, #888, #555 60%, #333); cursor: default; }
+  .buzz-btn.success { background: radial-gradient(circle at 40% 38%, #66bb6a, #3B6D11 60%, #1b4d21); }
+
+  .status-msg {
+    font-size: 15px; color: rgba(255,255,255,0.7); min-height: 24px;
+  }
+  .status-msg.good { color: #81c784; }
+  .status-msg.bad { color: #e57373; }
+  .status-msg.warn { color: #FFB74D; }
+
+  .conn-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #e57373; display: inline-block; margin-right: 6px;
+    vertical-align: middle;
+  }
+  .conn-dot.connected { background: #81c784; }
+  .conn-status { font-size: 12px; color: rgba(255,255,255,0.4); }
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <h1>⚡ Buzzer</h1>
+  <p>IT Audit Jeopardy — Student Buzzer</p>
+
+  <label class="field-label">Supabase Project URL</label>
+  <input id="sb-url" placeholder="https://xxxxxxxxxxxx.supabase.co" />
+
+  <label class="field-label">Supabase Anon Key</label>
+  <input id="sb-key" placeholder="eyJhbGci..." />
+
+  <label class="field-label">Room Name</label>
+  <input id="room-name" value="room1" />
+
+  <label class="field-label">Your Group Number</label>
+  <select id="group-select">
+    <option value="">-- Select your group --</option>
+    <option value="G1">Group 1</option>
+    <option value="G2">Group 2</option>
+    <option value="G3">Group 3</option>
+    <option value="G4">Group 4</option>
+    <option value="G5">Group 5</option>
+    <option value="G6">Group 6</option>
+    <option value="G7">Group 7</option>
+    <option value="G8">Group 8</option>
+    <option value="G9">Group 9</option>
+    <option value="G10">Group 10</option>
+    <option value="G11">Group 11</option>
+    <option value="G12">Group 12</option>
+  </select>
+
+  <button class="btn-join" onclick="joinRoom()">Join Game</button>
+</div>
+
+<div id="buzzer">
+  <div>
+    <div class="group-display" id="group-display"></div>
+    <div class="group-sub" id="room-display"></div>
+  </div>
+  <button class="buzz-btn" id="buzz-btn" onclick="buzz()">
+    <span class="buzz-icon">🔔</span>
+    <span>BUZZ!</span>
+  </button>
+  <div class="status-msg" id="status-msg">Ready to buzz in!</div>
+  <div class="conn-status"><span class="conn-dot" id="conn-dot"></span><span id="conn-label">Connecting...</span></div>
+</div>
+
+<script>
+let supabase = null;
+let channel = null;
+let myGroup = '';
+let locked = false;
+
+// Pre-fill from URL params
+const params = new URLSearchParams(window.location.search);
+if (params.get('room')) document.getElementById('room-name').value = params.get('room');
+if (params.get('url')) document.getElementById('sb-url').value = params.get('url');
+if (params.get('key')) document.getElementById('sb-key').value = params.get('key');
+
+function joinRoom() {
+  const url = document.getElementById('sb-url').value.trim();
+  const key = document.getElementById('sb-key').value.trim();
+  const room = document.getElementById('room-name').value.trim() || 'room1';
+  const grp = document.getElementById('group-select').value;
+
+  if (!url || !key) { alert('Please enter Supabase URL and Key.'); return; }
+  if (!grp) { alert('Please select your group number.'); return; }
+
+  myGroup = grp;
+  supabase = window.supabase.createClient(url, key);
+
+  channel = supabase.channel('room:' + room)
+    .on('broadcast', { event: 'reset' }, () => { unlock(); })
+    .subscribe((status) => {
+      const dot = document.getElementById('conn-dot');
+      const lbl = document.getElementById('conn-label');
+      if (status === 'SUBSCRIBED') {
+        dot.className = 'conn-dot connected';
+        lbl.textContent = 'Connected to ' + room;
+      } else {
+        dot.className = 'conn-dot';
+        lbl.textContent = 'Connecting...';
+      }
+    });
+
+  document.getElementById('setup').style.display = 'none';
+  const buz = document.getElementById('buzzer');
+  buz.style.display = 'flex';
+  document.getElementById('group-display').textContent = grp.replace('G', 'Group ');
+  document.getElementById('room-display').textContent = 'Room: ' + room;
+}
+
+async function buzz() {
+  if (locked || !channel) return;
+  locked = true;
+  const btn = document.getElementById('buzz-btn');
+  const msg = document.getElementById('status-msg');
+  btn.className = 'buzz-btn success';
+  msg.textContent = '✓ Buzzed in!';
+  msg.className = 'status-msg good';
+
+  try {
+    await channel.send({ type: 'broadcast', event: 'buzz', payload: { group: myGroup } });
+  } catch(e) {
+    msg.textContent = 'Connection error — try again';
+    msg.className = 'status-msg bad';
+    locked = false;
+    btn.className = 'buzz-btn';
+    return;
+  }
+
+  setTimeout(() => {
+    if (locked) {
+      btn.className = 'buzz-btn locked';
+      msg.textContent = 'Waiting for teacher...';
+      msg.className = 'status-msg warn';
+    }
+  }, 1500);
+}
+
+function unlock() {
+  locked = false;
+  const btn = document.getElementById('buzz-btn');
+  btn.className = 'buzz-btn';
+  const msg = document.getElementById('status-msg');
+  msg.textContent = 'Ready to buzz in!';
+  msg.className = 'status-msg';
+}
+</script>
+</body>
+</html>
