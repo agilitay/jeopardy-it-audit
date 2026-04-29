@@ -91,18 +91,8 @@
 <body>
 
 <div id="setup">
-  <h1>⚡ Buzzer</h1>
-  <p>IT Audit Jeopardy — Student Buzzer</p>
-
-  <label class="field-label">Supabase Project URL</label>
-  <input id="sb-url" placeholder="https://xxxxxxxxxxxx.supabase.co" />
-
-  <label class="field-label">Supabase Anon Key</label>
-  <input id="sb-key" placeholder="eyJhbGci..." />
-
-  <label class="field-label">Room Name</label>
-  <input id="room-name" value="room1" />
-
+  <h1>⚡ IT Audit Jeopardy</h1>
+  <p style="color:rgba(255,255,255,0.6);font-size:14px;margin-bottom:1.5rem;">Select your group number to join</p>
   <label class="field-label">Your Group Number</label>
   <select id="group-select">
     <option value="">-- Select your group --</option>
@@ -119,7 +109,6 @@
     <option value="G11">Group 11</option>
     <option value="G12">Group 12</option>
   </select>
-
   <button class="btn-join" onclick="joinRoom()">Join Game</button>
 </div>
 
@@ -142,19 +131,14 @@ let channel = null;
 let myGroup = '';
 let locked = false;
 
-// Pre-fill from URL params
-const params = new URLSearchParams(window.location.search);
-if (params.get('room')) document.getElementById('room-name').value = params.get('room');
-if (params.get('url')) document.getElementById('sb-url').value = params.get('url');
-if (params.get('key')) document.getElementById('sb-key').value = params.get('key');
+// Credentials are baked in — no URL params needed
 
 function joinRoom() {
-  const url = document.getElementById('sb-url').value.trim();
-  const key = document.getElementById('sb-key').value.trim();
-  const room = document.getElementById('room-name').value.trim() || 'room1';
+  const url = 'https://fyfhubezatebrnxestbn.supabase.co';
+  const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5Zmh1YmV6YXRlYnJueGVzdGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NzgwNzcsImV4cCI6MjA5MzA1NDA3N30.BDBe1fvWbrjuCfc9hJj0nHWTjxE8tGjrP-oUgw1ajNc';
+  const room = 'room1';
   const grp = document.getElementById('group-select').value;
 
-  if (!url || !key) { alert('Please enter Supabase URL and Key.'); return; }
   if (!grp) { alert('Please select your group number.'); return; }
 
   myGroup = grp;
