@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IT Audit Jeopardy – Teacher Board</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root {
     --blue-dark: #042C53;
@@ -120,26 +120,12 @@
 </head>
 <body>
 
-<!-- SETUP SCREEN -->
-<div id="setup-screen">
-  <div class="setup-card">
-    <h1>🎓 IT Audit Jeopardy</h1>
-    <p>Teacher / Host setup. You need a free Supabase project to enable real-time buzzing from student devices.</p>
-
-    <label>Supabase Project URL</label>
-    <input id="sb-url" placeholder="https://xxxxxxxxxxxx.supabase.co" />
-
-    <label>Supabase Anon Key</label>
-    <input id="sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
-
-    <label>Game Room Name (anything you like)</label>
-    <input id="room-name" value="room1" />
-
-    <button class="btn-primary" onclick="startGame()">Launch Teacher Board</button>
-
-    <div class="setup-note">
-      <strong>First time?</strong> See <code>SETUP.md</code> for step-by-step Supabase instructions (takes ~5 minutes, free). Your Supabase URL and key are found in your project's <em>Settings → API</em> page.
-    </div>
+<!-- LOADING SCREEN -->
+<div id="setup-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+  <div style="text-align:center;color:#fff;">
+    <div style="font-size:40px;margin-bottom:1rem;">⚡</div>
+    <div style="font-size:20px;font-weight:600;margin-bottom:0.5rem;">IT Audit Jeopardy</div>
+    <div style="font-size:14px;color:rgba(255,255,255,0.5);" id="loading-msg">Connecting to game server...</div>
   </div>
 </div>
 
@@ -269,23 +255,35 @@ let channel = null;
 for (let i = 1; i <= 12; i++) scores['G' + i] = 0;
 
 function startGame() {
-  const url = document.getElementById('sb-url').value.trim();
-  const key = document.getElementById('sb-key').value.trim();
-  roomName = document.getElementById('room-name').value.trim() || 'room1';
+  const url = 'https://fyfhubezatebrnxestbn.supabase.co';
+  const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5Zmh1YmV6YXRlYnJueGVzdGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NzgwNzcsImV4cCI6MjA5MzA1NDA3N30.BDBe1fvWbrjuCfc9hJj0nHWTjxE8tGjrP-oUgw1ajNc';
+  roomName = 'room1';
 
-  if (!url || !key) { alert('Please enter your Supabase URL and Anon Key.'); return; }
-
-  supabase = window.supabase.createClient(url, key);
+  try {
+    const sbLib = window.supabase || window.Supabase;
+    if (!sbLib || !sbLib.createClient) {
+      document.getElementById('loading-msg').textContent = 'Library load error — please refresh.';
+      return;
+    }
+    supabase = sbLib.createClient(url, key);
+  } catch(e) {
+    document.getElementById('loading-msg').textContent = 'Error: ' + e.message;
+    return;
+  }
 
   channel = supabase.channel('room:' + roomName)
     .on('broadcast', { event: 'buzz' }, ({ payload }) => {
       handleBuzz(payload.group);
     })
-    .subscribe();
-
-  document.getElementById('setup-screen').style.display = 'none';
-  document.getElementById('game-screen').style.display = 'block';
-  renderBoard();
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'block';
+        renderBoard();
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        document.getElementById('loading-msg').textContent = 'Connection failed ('  + status + ') — please refresh.';
+      }
+    });
 }
 
 function handleBuzz(groupKey) {
@@ -405,6 +403,8 @@ function closeQuestion() {
 
 function resetScores() { for (let i=1;i<=12;i++) scores['G'+i]=0; selectedGroup=null; renderBoard(); }
 function resetBoard() { usedCells={}; resetScores(); }
+
+window.addEventListener('load', startGame);
 
 function openEdit() {
   editTabIdx = 0;
