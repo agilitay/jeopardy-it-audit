@@ -4,34 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IT Audit Jeopardy – Teacher Board</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root {
-    --blue-dark: #042C53;
-    --blue-mid: #185FA5;
-    --blue-light: #E6F1FB;
-    --green-bg: #EAF3DE;
-    --green-border: #3B6D11;
-    --green-text: #27500A;
-    --red-bg: #FCEBEB;
-    --red-border: #A32D2D;
-    --red-text: #791F1F;
-    --amber-bg: #FAEEDA;
-    --amber-border: #BA7517;
-    --amber-text: #412402;
-    --gray-bg: #f5f5f5;
-    --gray-border: #ddd;
-    --text: #1a1a1a;
-    --text-muted: #666;
-    --surface: #fff;
-    --radius: 8px;
+    --blue-dark: #042C53; --blue-mid: #185FA5; --blue-light: #E6F1FB;
+    --green-bg: #EAF3DE; --green-border: #3B6D11; --green-text: #27500A;
+    --red-bg: #FCEBEB; --red-border: #A32D2D; --red-text: #791F1F;
+    --amber-bg: #FAEEDA; --amber-border: #BA7517; --amber-text: #412402;
+    --gray-bg: #f5f5f5; --gray-border: #ddd; --text: #1a1a1a;
+    --text-muted: #666; --surface: #fff; --radius: 8px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a1628; color: var(--text); min-height: 100vh; }
-  #game-screen { display: none; padding: 1rem; }
-  .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+  #game-screen { padding: 1rem; }
+  .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 8px; }
   .top-bar h1 { color: #fff; font-size: 20px; font-weight: 600; letter-spacing: 1px; }
-  .top-bar-btns { display: flex; gap: 8px; }
+  .top-bar-btns { display: flex; gap: 6px; flex-wrap: wrap; }
   .btn-sm { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: var(--radius); padding: 6px 12px; font-size: 12px; cursor: pointer; }
   .btn-sm:hover { background: rgba(255,255,255,0.25); }
   .scoreboard { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; margin-bottom: 0.75rem; }
@@ -41,15 +28,21 @@
   .score-cell .grp { font-size: 9px; color: rgba(255,255,255,0.6); }
   .score-cell .pts { font-size: 13px; font-weight: 600; color: #fff; }
   .score-cell .pts.neg { color: #F09595; }
-  .buzz-indicator { background: var(--amber-bg); border: 2px solid var(--amber-border); border-radius: var(--radius); padding: 8px 16px; text-align: center; font-size: 15px; font-weight: 600; color: var(--amber-text); margin-bottom: 0.75rem; display: none; animation: pulse 0.5s ease; }
-  @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.03)} 100%{transform:scale(1)} }
+  .conn-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 0.75rem; padding: 6px 12px; background: rgba(255,255,255,0.07); border-radius: var(--radius); }
+  .conn-dot { width: 8px; height: 8px; border-radius: 50%; background: #e57373; flex-shrink: 0; }
+  .conn-dot.ok { background: #81c784; }
+  .conn-dot.waiting { background: #FFB74D; animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .conn-label { font-size: 12px; color: rgba(255,255,255,0.5); }
+  .buzz-indicator { background: var(--amber-bg); border: 2px solid var(--amber-border); border-radius: var(--radius); padding: 10px 16px; text-align: center; font-size: 16px; font-weight: 700; color: var(--amber-text); margin-bottom: 0.75rem; display: none; animation: pulse 0.4s ease; }
+  @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.04)} 100%{transform:scale(1)} }
   .jboard { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
   .col-header { background: var(--blue-dark); color: var(--blue-light); text-align: center; padding: 10px 6px; border-radius: var(--radius); font-size: 12px; font-weight: 600; min-height: 56px; display: flex; align-items: center; justify-content: center; line-height: 1.3; }
-  .j-cell { background: var(--blue-mid); color: #fff; border-radius: var(--radius); text-align: center; padding: 14px 4px; font-size: 22px; font-weight: 700; cursor: pointer; transition: background 0.15s, transform 0.1s; min-height: 60px; display: flex; align-items: center; justify-content: center; border: none; }
+  .j-cell { background: var(--blue-mid); color: #fff; border-radius: var(--radius); text-align: center; padding: 14px 4px; font-size: 22px; font-weight: 700; cursor: pointer; transition: background 0.15s, transform 0.1s; min-height: 60px; display: flex; align-items: center; justify-content: center; border: none; width: 100%; }
   .j-cell:hover { background: #0C447C; transform: scale(1.02); }
   .j-cell.used { background: #0a1a2e; color: rgba(255,255,255,0.2); cursor: default; font-size: 14px; }
   .j-cell.used:hover { transform: none; background: #0a1a2e; }
-  #q-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+  #q-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
   #q-modal.open { display: flex; }
   .q-card { background: var(--surface); border-radius: 12px; width: 100%; max-width: 680px; padding: 1.5rem; max-height: 90vh; overflow-y: auto; }
   .q-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
@@ -61,20 +54,18 @@
   .choice-btn:hover { background: var(--gray-bg); }
   .choice-btn.reveal { background: var(--green-bg); border-color: var(--green-border); color: var(--green-text); font-weight: 600; }
   .buzz-in-section { background: var(--amber-bg); border: 1px solid var(--amber-border); border-radius: var(--radius); padding: 12px; margin-bottom: 1rem; }
-  .buzz-in-section .buzz-who { font-size: 15px; font-weight: 600; color: var(--amber-text); margin-bottom: 8px; }
-  .buzz-in-section .group-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .buzz-who { font-size: 15px; font-weight: 600; color: var(--amber-text); margin-bottom: 8px; }
+  .group-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
   .grp-btn { background: #fff; border: 1px solid var(--amber-border); border-radius: 6px; padding: 7px 4px; font-size: 12px; font-weight: 500; cursor: pointer; text-align: center; color: var(--amber-text); }
   .grp-btn:hover { background: var(--amber-bg); }
   .grp-btn.active { background: var(--amber-border); color: #fff; }
   .answer-row { display: flex; gap: 8px; margin-bottom: 1rem; }
-  .btn-correct { flex: 1; background: var(--green-bg); border: 1px solid var(--green-border); color: var(--green-text); border-radius: var(--radius); padding: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
-  .btn-correct:hover { background: #d4edbe; }
-  .btn-wrong { flex: 1; background: var(--red-bg); border: 1px solid var(--red-border); color: var(--red-text); border-radius: var(--radius); padding: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
-  .btn-wrong:hover { background: #f7d5d5; }
+  .btn-correct { flex:1; background: var(--green-bg); border: 1px solid var(--green-border); color: var(--green-text); border-radius: var(--radius); padding: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .btn-wrong { flex:1; background: var(--red-bg); border: 1px solid var(--red-border); color: var(--red-text); border-radius: var(--radius); padding: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
   .q-footer { display: flex; justify-content: space-between; }
   .btn-outline { background: transparent; border: 1px solid var(--gray-border); border-radius: var(--radius); padding: 8px 16px; font-size: 13px; cursor: pointer; }
   .btn-outline:hover { background: var(--gray-bg); }
-  #edit-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: flex-start; justify-content: center; padding: 1rem; overflow-y: auto; }
+  #edit-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 100; align-items: flex-start; justify-content: center; padding: 1rem; overflow-y: auto; }
   #edit-modal.open { display: flex; }
   .edit-card { background: var(--surface); border-radius: 12px; width: 100%; max-width: 700px; padding: 1.5rem; margin: auto; }
   .edit-card h2 { font-size: 18px; font-weight: 600; margin-bottom: 1rem; }
@@ -87,29 +78,15 @@
   .eq-block input, .eq-block textarea, .eq-block select { width: 100%; padding: 7px 10px; border: 1px solid var(--gray-border); border-radius: 6px; font-size: 13px; }
   .eq-block textarea { min-height: 64px; resize: vertical; }
   .edit-footer { display: flex; gap: 8px; margin-top: 1rem; }
-  .edit-footer button { flex: 1; padding: 10px; border-radius: var(--radius); font-size: 14px; cursor: pointer; }
+  .edit-footer button { flex:1; padding: 10px; border-radius: var(--radius); font-size: 14px; cursor: pointer; }
   .btn-save { background: var(--blue-mid); color: #fff; border: none; }
   .btn-cancel { background: transparent; border: 1px solid var(--gray-border); }
   .share-box { background: var(--blue-light); border: 1px solid #B5D4F4; border-radius: var(--radius); padding: 10px 14px; margin-bottom: 0.75rem; font-size: 13px; color: var(--blue-dark); }
   .share-box strong { display: block; margin-bottom: 4px; }
-  .share-box code { background: #fff; padding: 3px 8px; border-radius: 4px; font-family: monospace; font-size: 12px; word-break: break-all; }
+  .share-box code { background: #fff; padding: 3px 8px; border-radius: 4px; font-family: monospace; font-size: 11px; word-break: break-all; }
 </style>
 </head>
 <body>
-
-<!-- LOADING SCREEN -->
-<div id="setup-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;">
-  <div style="text-align:center;color:#fff;max-width:480px;width:100%;">
-    <div style="font-size:40px;margin-bottom:1rem;">⚡</div>
-    <div style="font-size:20px;font-weight:600;margin-bottom:0.5rem;">IT Audit Jeopardy</div>
-    <div style="font-size:14px;color:rgba(255,255,255,0.6);margin-bottom:1.5rem;" id="loading-msg">Connecting to game server...</div>
-    <div id="status-log" style="background:rgba(255,255,255,0.08);border-radius:8px;padding:12px;font-size:12px;color:rgba(255,255,255,0.5);font-family:monospace;text-align:left;min-height:60px;margin-bottom:1rem;"></div>
-    <button id="bypass-btn" onclick="bypassAndPlay()" style="display:none;background:#185FA5;color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:15px;font-weight:600;cursor:pointer;width:100%;margin-bottom:8px;">▶ Play Without Buzzer (Buzzer disabled)</button>
-    <button onclick="retryConnect()" style="background:transparent;color:rgba(255,255,255,0.5);border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:8px 20px;font-size:13px;cursor:pointer;width:100%;">↺ Retry Connection</button>
-  </div>
-</div>
-
-<!-- GAME SCREEN -->
 <div id="game-screen">
   <div class="top-bar">
     <h1>⚡ IT AUDIT JEOPARDY</h1>
@@ -121,12 +98,15 @@
     </div>
   </div>
   <div id="share-box" class="share-box" style="display:none;"></div>
-  <div class="scoreboard" id="scoreboard"></div>
+  <div class="conn-bar">
+    <div class="conn-dot waiting" id="conn-dot"></div>
+    <span class="conn-label" id="conn-label">Connecting to buzzer channel...</span>
+  </div>
   <div class="buzz-indicator" id="buzz-indicator"></div>
+  <div class="scoreboard" id="scoreboard"></div>
   <div class="jboard" id="jboard"></div>
 </div>
 
-<!-- QUESTION MODAL -->
 <div id="q-modal">
   <div class="q-card">
     <div class="q-card-header">
@@ -136,7 +116,7 @@
     <div class="q-text" id="q-text"></div>
     <div class="choices" id="q-choices"></div>
     <div class="buzz-in-section">
-      <div class="buzz-who" id="buzz-who">Waiting for buzz-in... or select group below:</div>
+      <div class="buzz-who" id="buzz-who">Waiting for buzz-in... or click a group below:</div>
       <div class="group-grid" id="grp-grid"></div>
     </div>
     <div class="answer-row" id="answer-row" style="display:none;">
@@ -150,7 +130,6 @@
   </div>
 </div>
 
-<!-- EDIT MODAL -->
 <div id="edit-modal">
   <div class="edit-card">
     <h2>✏️ Edit Questions</h2>
@@ -164,310 +143,190 @@
 </div>
 
 <script>
+// ── BUZZER CHANNEL CONFIG ──────────────────────────────────────────────
+// Uses ntfy.sh — free, no account needed, no library required
+// Each "room" is just a unique topic name on ntfy.sh
+const NTFY_TOPIC = 'jeopardy-itaudit-agilitay-room1';
+const NTFY_URL   = 'https://ntfy.sh/' + NTFY_TOPIC;
+// ──────────────────────────────────────────────────────────────────────
+
 const QUESTIONS = {
   chapters: [
-    {
-      id: "ch1", title: "IT Audit Intro",
-      questions: [
-        { points: 100, question: "What legislation created the Public Company Accounting Oversight Board (PCAOB)?", choices: ["A. Patriot Act", "B. Homeland Security Act", "C. Sarbanes-Oxley Act (SOX)", "D. Dodd-Frank Act"], answer: "C" },
-        { points: 200, question: "Which type of auditor independently evaluates computer controls to render an opinion on financial statements?", choices: ["A. Internal auditor", "B. External auditor", "C. IT governance officer", "D. Compliance manager"], answer: "B" },
-        { points: 300, question: "What does CISA stand for in the context of IT audit certifications?", choices: ["A. Certified Internal Security Analyst", "B. Certified Information Systems Auditor", "C. Certified IT Strategy Advisor", "D. Certified Information Security Assessor"], answer: "B" },
-        { points: 400, question: "Which of the following best describes 'Application Controls' in IT auditing?", choices: ["A. Controls that apply to all IT operations enterprise-wide", "B. Controls focused on physical security of data centers", "C. Automated controls that apply specifically to processing transactions", "D. Controls over network infrastructure and communication"], answer: "C" },
-        { points: 500, question: "COBIT's role in IT governance is best described as which of the following?", choices: ["A. A U.S. federal law mandating IT security audits", "B. An authoritative international framework of IT practices helping organizations achieve governance and management objectives", "C. A certification program exclusively for external auditors", "D. A software tool for automating IT audit procedures"], answer: "B" }
-      ]
-    },
-    {
-      id: "ch3", title: "The IT Audit Process",
-      questions: [
-        { points: 100, question: "What is the 'audit universe'?", choices: ["A. The total budget allocated for annual audits", "B. An inventory of all potential audit areas documenting key business processes", "C. The combined findings from all prior-year audits", "D. The set of regulatory standards auditors must follow"], answer: "B" },
-        { points: 200, question: "During which phase of the audit does an IT auditor gather data through interviews and inspection of documentation?", choices: ["A. Test Controls", "B. Document Results", "C. Preliminary Review", "D. Communication"], answer: "C" },
-        { points: 300, question: "What does 'substantive testing' determine in an IT audit?", choices: ["A. Whether the audit team has sufficient staffing", "B. The accuracy and completeness of information generated by a process or application", "C. Whether the auditor is independent from the client", "D. The legal validity of contracts with third-party vendors"], answer: "B" },
-        { points: 400, question: "When a control is found to be ineffective, what additional step should an auditor take before concluding?", choices: ["A. Immediately issue an adverse audit opinion", "B. Expand the audit to cover all prior years", "C. Identify and test mitigating or compensating controls", "D. Request management to terminate the control"], answer: "C" },
-        { points: 500, question: "Computer-Assisted Audit Techniques (CAATTs) are best associated with which phase of the IT audit?", choices: ["A. Audit planning and risk assessment", "B. Preliminary review and data gathering", "C. Substantive testing through auditing-through-the-computer", "D. Communication of final audit results to management"], answer: "C" }
-      ]
-    },
-    {
-      id: "ch5", title: "IT Governance & Strategy",
-      questions: [
-        { points: 100, question: "What is the primary purpose of the IT Balanced Scorecard?", choices: ["A. To track employee performance reviews", "B. To provide an overall picture of IT performance aligned to organizational objectives", "C. To record all IT-related financial transactions", "D. To schedule IT audits for the year"], answer: "B" },
-        { points: 200, question: "Which framework provides guidelines for best practices in IT services management and adheres to 5 core guidelines including Strategy, Design, and Transition?", choices: ["A. COBIT", "B. ISO/IEC 27002", "C. ITIL", "D. NIST SP 800-30"], answer: "C" },
-        { points: 300, question: "What is the role of an IT Steering Committee?", choices: ["A. To perform detailed technical security testing", "B. To link and align business and IT by reviewing plans, strategies, and resolving conflicts", "C. To manage day-to-day IT operations and helpdesk support", "D. To conduct annual external financial audits"], answer: "B" },
-        { points: 400, question: "According to the Gartner Group statistic referenced in Chapter 5, what percentage of companies lack a well-defined strategy?", choices: ["A. 50%", "B. 75%", "C. 95%", "D. 80%"], answer: "C" },
-        { points: 500, question: "Which governance step ensures that new technology solutions are the right fit, integrate well with other IT components, and can be maintained with minimal investment?", choices: ["A. Demand Management", "B. Project Initiation", "C. Procurement and Vendor Management", "D. Technical Review"], answer: "D" }
-      ]
-    },
-    {
-      id: "ch6", title: "Risk Management",
-      questions: [
-        { points: 100, question: "What does ERM stand for?", choices: ["A. External Risk Monitoring", "B. Enterprise Risk Management", "C. Evaluated Risk Metrics", "D. Emergency Response Management"], answer: "B" },
-        { points: 200, question: "Which organization developed the ERM Integrated Framework?", choices: ["A. ISACA", "B. PCAOB", "C. COSO", "D. NIST"], answer: "C" },
-        { points: 300, question: "How many specific interrelated components are included in the ERM Integrated Framework?", choices: ["A. 4", "B. 5", "C. 6", "D. 8"], answer: "D" },
-        { points: 400, question: "When IT risks cannot be insured, what two options are available to an organization?", choices: ["A. Transfer and Accept", "B. Reduce and Retain", "C. Avoid and Share", "D. Monitor and Defer"], answer: "B" },
-        { points: 500, question: "Which guidance provides the 'Guide for Conducting Risk Assessments' and has assisted federal agencies in improving IT security quality?", choices: ["A. ISO/IEC 27005", "B. GAO IMTEC 8.1.4", "C. NIST SP 800-30", "D. COBIT 5"], answer: "C" }
-      ]
-    },
-    {
-      id: "ch9", title: "Application Systems",
-      questions: [
-        { points: 100, question: "What are the three types of application controls?", choices: ["A. Physical, Logical, and Administrative", "B. Input, Processing, and Output", "C. Preventive, Detective, and Corrective", "D. Manual, Automated, and Hybrid"], answer: "B" },
-        { points: 200, question: "What is End-User Development (EUD)?", choices: ["A. IT department-led software development for end users", "B. Application systems created, operated, and maintained by end-users who are not professional developers", "C. A formal software development lifecycle methodology", "D. External vendor development of customized enterprise applications"], answer: "B" },
-        { points: 300, question: "What does EDI stand for, as discussed in Chapter 9?", choices: ["A. Enterprise Data Integration", "B. Electronic Document Interchange", "C. Electronic Data Interchange", "D. Encrypted Data Interface"], answer: "C" },
-        { points: 400, question: "A 'cross-footing' processing control verifies accuracy by doing which of the following?", choices: ["A. Matching invoices with purchase orders and receiving reports", "B. Comparing two alternative ways of calculating the same total", "C. Recalculating a check digit to verify data entry has no errors", "D. Testing that data in a field is an appropriate sign"], answer: "B" },
-        { points: 500, question: "According to the 2017 OWASP Top 10, which of the following is NOT listed as one of the most critical web application security risks?", choices: ["A. Injection", "B. Cross-Site Scripting", "C. Phishing and Social Engineering", "D. Broken Authentication and Session Management"], answer: "C" }
-      ]
-    }
+    { id:"ch1", title:"IT Audit Intro", questions:[
+      { points:100, question:"What legislation created the Public Company Accounting Oversight Board (PCAOB)?", choices:["A. Patriot Act","B. Homeland Security Act","C. Sarbanes-Oxley Act (SOX)","D. Dodd-Frank Act"], answer:"C" },
+      { points:200, question:"Which type of auditor independently evaluates computer controls to render an opinion on financial statements?", choices:["A. Internal auditor","B. External auditor","C. IT governance officer","D. Compliance manager"], answer:"B" },
+      { points:300, question:"What does CISA stand for in the context of IT audit certifications?", choices:["A. Certified Internal Security Analyst","B. Certified Information Systems Auditor","C. Certified IT Strategy Advisor","D. Certified Information Security Assessor"], answer:"B" },
+      { points:400, question:"Which of the following best describes 'Application Controls' in IT auditing?", choices:["A. Controls that apply to all IT operations enterprise-wide","B. Controls focused on physical security of data centers","C. Automated controls that apply specifically to processing transactions","D. Controls over network infrastructure and communication"], answer:"C" },
+      { points:500, question:"COBIT's role in IT governance is best described as which of the following?", choices:["A. A U.S. federal law mandating IT security audits","B. An authoritative international framework of IT practices helping organizations achieve governance and management objectives","C. A certification program exclusively for external auditors","D. A software tool for automating IT audit procedures"], answer:"B" }
+    ]},
+    { id:"ch3", title:"The IT Audit Process", questions:[
+      { points:100, question:"What is the 'audit universe'?", choices:["A. The total budget allocated for annual audits","B. An inventory of all potential audit areas documenting key business processes","C. The combined findings from all prior-year audits","D. The set of regulatory standards auditors must follow"], answer:"B" },
+      { points:200, question:"During which phase does an IT auditor gather data through interviews and inspection of documentation?", choices:["A. Test Controls","B. Document Results","C. Preliminary Review","D. Communication"], answer:"C" },
+      { points:300, question:"What does 'substantive testing' determine in an IT audit?", choices:["A. Whether the audit team has sufficient staffing","B. The accuracy and completeness of information generated by a process or application","C. Whether the auditor is independent from the client","D. The legal validity of contracts with third-party vendors"], answer:"B" },
+      { points:400, question:"When a control is found ineffective, what step should an auditor take before concluding?", choices:["A. Immediately issue an adverse audit opinion","B. Expand the audit to cover all prior years","C. Identify and test mitigating or compensating controls","D. Request management to terminate the control"], answer:"C" },
+      { points:500, question:"Computer-Assisted Audit Techniques (CAATTs) are best associated with which phase of the IT audit?", choices:["A. Audit planning and risk assessment","B. Preliminary review and data gathering","C. Substantive testing through auditing-through-the-computer","D. Communication of final audit results to management"], answer:"C" }
+    ]},
+    { id:"ch5", title:"IT Governance & Strategy", questions:[
+      { points:100, question:"What is the primary purpose of the IT Balanced Scorecard?", choices:["A. To track employee performance reviews","B. To provide an overall picture of IT performance aligned to organizational objectives","C. To record all IT-related financial transactions","D. To schedule IT audits for the year"], answer:"B" },
+      { points:200, question:"Which framework provides best practices for IT services management with 5 guidelines including Strategy, Design, and Transition?", choices:["A. COBIT","B. ISO/IEC 27002","C. ITIL","D. NIST SP 800-30"], answer:"C" },
+      { points:300, question:"What is the role of an IT Steering Committee?", choices:["A. To perform detailed technical security testing","B. To link and align business and IT by reviewing plans, strategies, and resolving conflicts","C. To manage day-to-day IT operations and helpdesk support","D. To conduct annual external financial audits"], answer:"B" },
+      { points:400, question:"According to the Gartner Group statistic in Chapter 5, what percentage of companies lack a well-defined strategy?", choices:["A. 50%","B. 75%","C. 95%","D. 80%"], answer:"C" },
+      { points:500, question:"Which governance step ensures new technology solutions are the right fit, integrate well, and can be maintained with minimal investment?", choices:["A. Demand Management","B. Project Initiation","C. Procurement and Vendor Management","D. Technical Review"], answer:"D" }
+    ]},
+    { id:"ch6", title:"Risk Management", questions:[
+      { points:100, question:"What does ERM stand for?", choices:["A. External Risk Monitoring","B. Enterprise Risk Management","C. Evaluated Risk Metrics","D. Emergency Response Management"], answer:"B" },
+      { points:200, question:"Which organization developed the ERM Integrated Framework?", choices:["A. ISACA","B. PCAOB","C. COSO","D. NIST"], answer:"C" },
+      { points:300, question:"How many specific interrelated components are in the ERM Integrated Framework?", choices:["A. 4","B. 5","C. 6","D. 8"], answer:"D" },
+      { points:400, question:"When IT risks cannot be insured, what two options are available?", choices:["A. Transfer and Accept","B. Reduce and Retain","C. Avoid and Share","D. Monitor and Defer"], answer:"B" },
+      { points:500, question:"Which guidance provides the 'Guide for Conducting Risk Assessments' and has assisted federal agencies in improving IT security?", choices:["A. ISO/IEC 27005","B. GAO IMTEC 8.1.4","C. NIST SP 800-30","D. COBIT 5"], answer:"C" }
+    ]},
+    { id:"ch9", title:"Application Systems", questions:[
+      { points:100, question:"What are the three types of application controls?", choices:["A. Physical, Logical, and Administrative","B. Input, Processing, and Output","C. Preventive, Detective, and Corrective","D. Manual, Automated, and Hybrid"], answer:"B" },
+      { points:200, question:"What is End-User Development (EUD)?", choices:["A. IT department-led software development for end users","B. Application systems created, operated, and maintained by non-professional developers","C. A formal software development lifecycle methodology","D. External vendor development of customized enterprise applications"], answer:"B" },
+      { points:300, question:"What does EDI stand for as discussed in Chapter 9?", choices:["A. Enterprise Data Integration","B. Electronic Document Interchange","C. Electronic Data Interchange","D. Encrypted Data Interface"], answer:"C" },
+      { points:400, question:"A 'cross-footing' processing control verifies accuracy by doing which of the following?", choices:["A. Matching invoices with purchase orders and receiving reports","B. Comparing two alternative ways of calculating the same total","C. Recalculating a check digit to verify no data entry error","D. Testing that data in a field is an appropriate sign"], answer:"B" },
+      { points:500, question:"According to the 2017 OWASP Top 10, which is NOT listed as a critical web application security risk?", choices:["A. Injection","B. Cross-Site Scripting","C. Phishing and Social Engineering","D. Broken Authentication and Session Management"], answer:"C" }
+    ]}
   ]
 };
 
 let questions = JSON.parse(JSON.stringify(QUESTIONS));
-let usedCells = {};
-let scores = {};
-let selectedGroup = null;
-let buzzedGroup = null;
-let currentQ = null;
-let currentCi = null;
-let currentQi = null;
-let editTabIdx = 0;
-let supabase = null;
-let roomName = '';
-let channel = null;
+let usedCells = {}, scores = {}, selectedGroup = null, buzzedGroup = null;
+let currentQ = null, currentCi = null, currentQi = null, editTabIdx = 0;
+let eventSource = null, lastEventId = null;
 
-for (let i = 1; i <= 12; i++) scores['G' + i] = 0;
+for (let i = 1; i <= 12; i++) scores['G'+i] = 0;
 
-function startGame() {
-  const url = 'https://fyfhubezatebrnxestbn.supabase.co';
-  const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5Zmh1YmV6YXRlYnJueGVzdGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NzgwNzcsImV4cCI6MjA5MzA1NDA3N30.BDBe1fvWbrjuCfc9hJj0nHWTjxE8tGjrP-oUgw1ajNc';
-  roomName = 'room1';
-
+// ── NTFY LISTENER ─────────────────────────────────────────────────────
+function startBuzzerListener() {
+  setConnStatus('waiting', 'Connecting to buzzer channel...');
   try {
-    const sbLib = window.supabase || window.Supabase;
-    if (!sbLib || !sbLib.createClient) {
-      document.getElementById('loading-msg').textContent = 'Library load error — please refresh.';
-      return;
-    }
-    supabase = sbLib.createClient(url, key);
-  } catch(e) {
-    document.getElementById('loading-msg').textContent = 'Error: ' + e.message;
-    return;
+    eventSource = new EventSource(NTFY_URL + '/sse');
+    eventSource.onopen = () => setConnStatus('ok', 'Buzzer ready ✓  — students can buzz in');
+    eventSource.onerror = () => setConnStatus('error', 'Buzzer disconnected — retrying...');
+    eventSource.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        // ntfy wraps the message in data.message
+        const msg = data.message || data;
+        if (typeof msg === 'string' && msg.startsWith('BUZZ:')) {
+          const group = msg.replace('BUZZ:', '').trim();
+          handleBuzz(group);
+        }
+      } catch(_) {}
+    };
+  } catch(err) {
+    setConnStatus('error', 'Buzzer unavailable — use manual group buttons');
   }
-
-  const log = document.getElementById('status-log');
-  function addLog(msg) {
-    const t = new Date().toLocaleTimeString();
-    log.innerHTML += '[' + t + '] ' + msg + '<br>';
-  }
-
-  addLog('Supabase client created');
-  addLog('Connecting to room: ' + roomName);
-
-  channel = supabase.channel('room:' + roomName, {
-    config: { broadcast: { self: false } }
-  })
-    .on('broadcast', { event: 'buzz' }, ({ payload }) => {
-      handleBuzz(payload.group);
-    })
-    .subscribe((status, err) => {
-      addLog('Status: ' + status + (err ? ' | Error: ' + JSON.stringify(err) : ''));
-      if (status === 'SUBSCRIBED') {
-        document.getElementById('setup-screen').style.display = 'none';
-        document.getElementById('game-screen').style.display = 'block';
-        renderBoard();
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        document.getElementById('loading-msg').textContent = 'Connection issue (' + status + ') — see log below';
-        document.getElementById('bypass-btn').style.display = 'block';
-      } else if (status === 'CLOSED') {
-        document.getElementById('loading-msg').textContent = 'Connection closed — try retry or play without buzzer';
-        document.getElementById('bypass-btn').style.display = 'block';
-      } else {
-        document.getElementById('loading-msg').textContent = 'Status: ' + status + '...';
-        setTimeout(() => {
-          if (document.getElementById('setup-screen').style.display !== 'none') {
-            document.getElementById('bypass-btn').style.display = 'block';
-            addLog('Timeout — showing bypass option');
-          }
-        }, 8000);
-      }
-    });
 }
 
-function bypassAndPlay() {
-  channel = null;
-  document.getElementById('setup-screen').style.display = 'none';
-  document.getElementById('game-screen').style.display = 'block';
-  renderBoard();
-}
-
-function retryConnect() {
-  document.getElementById('status-log').innerHTML = '';
-  document.getElementById('bypass-btn').style.display = 'none';
-  document.getElementById('loading-msg').textContent = 'Retrying...';
-  if (channel) { supabase.removeChannel(channel); channel = null; }
-  startGame();
+function setConnStatus(state, text) {
+  const dot = document.getElementById('conn-dot');
+  dot.className = 'conn-dot' + (state==='ok' ? ' ok' : state==='waiting' ? ' waiting' : '');
+  document.getElementById('conn-label').textContent = text;
 }
 
 function handleBuzz(groupKey) {
   if (buzzedGroup) return;
   buzzedGroup = groupKey;
-  const label = groupKey.replace('G', 'Group ');
+  const label = groupKey.replace('G','Group ');
   const ind = document.getElementById('buzz-indicator');
   ind.textContent = '🔔 ' + label + ' buzzed in!';
   ind.style.display = 'block';
-  if (document.getElementById('q-modal').classList.contains('open')) {
-    setBuzzedInModal(groupKey);
-  }
-  setTimeout(() => { if (!document.getElementById('q-modal').classList.contains('open')) ind.style.display = 'none'; }, 4000);
+  if (document.getElementById('q-modal').classList.contains('open')) setBuzzedInModal(groupKey);
+  setTimeout(() => { if (!document.getElementById('q-modal').classList.contains('open')) ind.style.display='none'; }, 5000);
 }
 
 function showShareInfo() {
   const box = document.getElementById('share-box');
-  const url = window.location.href.replace('index.html', '') + 'buzz.html';
-  box.style.display = box.style.display === 'none' ? 'block' : 'none';
-  box.innerHTML = '<strong>📱 Student Buzzer Link — share this with your class:</strong><br><code>' + url + '</code>';
+  const url = window.location.href.replace('index.html','') + 'buzz.html';
+  box.style.display = box.style.display==='none' ? 'block' : 'none';
+  box.innerHTML = '<strong>📱 Share this link with students:</strong><br><code>' + url + '</code>';
 }
 
 function renderBoard() {
   const sb = document.getElementById('scoreboard');
   sb.innerHTML = '';
-  for (let i = 1; i <= 12; i++) {
-    const key = 'G' + i;
-    const pts = scores[key];
-    const div = document.createElement('div');
-    div.className = 'score-cell' + (selectedGroup === key ? ' selected' : '');
-    div.innerHTML = '<div class="grp">Grp ' + i + '</div><div class="pts' + (pts < 0 ? ' neg' : '') + '">' + pts + '</div>';
-    div.onclick = () => { selectedGroup = selectedGroup === key ? null : key; renderBoard(); };
+  for (let i=1;i<=12;i++) {
+    const key='G'+i, pts=scores[key];
+    const div=document.createElement('div');
+    div.className='score-cell'+(selectedGroup===key?' selected':'');
+    div.innerHTML='<div class="grp">Grp '+i+'</div><div class="pts'+(pts<0?' neg':'')+'">'+pts+'</div>';
+    div.onclick=()=>{ selectedGroup=selectedGroup===key?null:key; renderBoard(); };
     sb.appendChild(div);
   }
-  const board = document.getElementById('jboard');
-  board.innerHTML = '';
-  questions.chapters.forEach(ch => {
-    const h = document.createElement('div');
-    h.className = 'col-header';
-    h.textContent = ch.title;
-    board.appendChild(h);
-  });
-  [0,1,2,3,4].forEach(qi => {
-    questions.chapters.forEach((ch, ci) => {
-      const cell = document.createElement('button');
-      const key = ci + '-' + qi;
-      if (usedCells[key]) {
-        cell.className = 'j-cell used'; cell.textContent = '✓';
-      } else {
-        cell.className = 'j-cell';
-        cell.textContent = '$' + ch.questions[qi].points;
-        cell.onclick = () => openQuestion(ci, qi);
-      }
+  const board=document.getElementById('jboard');
+  board.innerHTML='';
+  questions.chapters.forEach(ch=>{ const h=document.createElement('div'); h.className='col-header'; h.textContent=ch.title; board.appendChild(h); });
+  [0,1,2,3,4].forEach(qi=>{
+    questions.chapters.forEach((ch,ci)=>{
+      const cell=document.createElement('button'), key=ci+'-'+qi;
+      if(usedCells[key]){ cell.className='j-cell used'; cell.textContent='✓'; }
+      else { cell.className='j-cell'; cell.textContent='$'+ch.questions[qi].points; cell.onclick=()=>openQuestion(ci,qi); }
       board.appendChild(cell);
     });
   });
 }
 
-function openQuestion(ci, qi) {
-  currentCi = ci; currentQi = qi;
-  currentQ = questions.chapters[ci].questions[qi];
-  buzzedGroup = null;
-  document.getElementById('buzz-indicator').style.display = 'none';
-  document.getElementById('q-cat').textContent = questions.chapters[ci].title;
-  document.getElementById('q-pts').textContent = '$' + currentQ.points;
-  document.getElementById('q-text').textContent = currentQ.question;
-  const cc = document.getElementById('q-choices');
-  cc.innerHTML = '';
-  currentQ.choices.forEach(c => {
-    const b = document.createElement('button');
-    b.className = 'choice-btn'; b.textContent = c; cc.appendChild(b);
-  });
-  const gg = document.getElementById('grp-grid');
-  gg.innerHTML = '';
-  document.getElementById('buzz-who').textContent = 'Waiting for buzz-in... or select group below:';
-  document.getElementById('answer-row').style.display = 'none';
-  for (let i = 1; i <= 12; i++) {
-    const key = 'G' + i;
-    const b = document.createElement('button');
-    b.className = 'grp-btn'; b.textContent = 'Grp ' + i; b.id = 'grpb-' + key;
-    b.onclick = () => setBuzzedInModal(key);
-    gg.appendChild(b);
-  }
+function openQuestion(ci,qi) {
+  currentCi=ci; currentQi=qi; currentQ=questions.chapters[ci].questions[qi]; buzzedGroup=null;
+  document.getElementById('buzz-indicator').style.display='none';
+  document.getElementById('q-cat').textContent=questions.chapters[ci].title;
+  document.getElementById('q-pts').textContent='$'+currentQ.points;
+  document.getElementById('q-text').textContent=currentQ.question;
+  const cc=document.getElementById('q-choices'); cc.innerHTML='';
+  currentQ.choices.forEach(c=>{ const b=document.createElement('button'); b.className='choice-btn'; b.textContent=c; cc.appendChild(b); });
+  const gg=document.getElementById('grp-grid'); gg.innerHTML='';
+  document.getElementById('buzz-who').textContent='Waiting for buzz-in... or click a group below:';
+  document.getElementById('answer-row').style.display='none';
+  for(let i=1;i<=12;i++){ const key='G'+i,b=document.createElement('button'); b.className='grp-btn'; b.textContent='Grp '+i; b.onclick=()=>setBuzzedInModal(key); gg.appendChild(b); }
   document.getElementById('q-modal').classList.add('open');
 }
 
 function setBuzzedInModal(key) {
-  buzzedGroup = key;
-  document.getElementById('buzz-who').textContent = '🔔 ' + key.replace('G','Group ') + ' buzzed in!';
-  document.querySelectorAll('.grp-btn').forEach((b,i) => {
-    b.className = 'grp-btn' + ('G'+(i+1) === key ? ' active' : '');
-  });
-  document.getElementById('answer-row').style.display = 'flex';
+  buzzedGroup=key;
+  document.getElementById('buzz-who').textContent='🔔 '+key.replace('G','Group ')+' buzzed in!';
+  document.querySelectorAll('.grp-btn').forEach((b,i)=>{ b.className='grp-btn'+('G'+(i+1)===key?' active':''); });
+  document.getElementById('answer-row').style.display='flex';
 }
 
 function markAnswer(correct) {
-  if (!buzzedGroup || !currentQ) return;
-  const pts = currentQ.points;
-  scores[buzzedGroup] += correct ? pts : -pts;
-  if (correct) revealAnswer();
-  usedCells[currentCi + '-' + currentQi] = true;
-  document.getElementById('answer-row').style.display = 'none';
-  document.getElementById('buzz-who').textContent = (correct ? '✓ Correct! ' : '✗ Wrong! ') + buzzedGroup.replace('G','Group ') + ': ' + (correct?'+':'-') + pts + ' pts → ' + scores[buzzedGroup];
+  if(!buzzedGroup||!currentQ) return;
+  const pts=currentQ.points;
+  scores[buzzedGroup]+=correct?pts:-pts;
+  if(correct) revealAnswer();
+  usedCells[currentCi+'-'+currentQi]=true;
+  document.getElementById('answer-row').style.display='none';
+  document.getElementById('buzz-who').textContent=(correct?'✓ Correct! ':'✗ Wrong! ')+buzzedGroup.replace('G','Group ')+': '+(correct?'+':'-')+pts+' pts → '+scores[buzzedGroup];
 }
 
 function revealAnswer() {
-  if (!currentQ) return;
-  document.querySelectorAll('.choice-btn').forEach(b => {
-    if (b.textContent.startsWith(currentQ.answer + '.')) b.className = 'choice-btn reveal';
-  });
+  if(!currentQ) return;
+  document.querySelectorAll('.choice-btn').forEach(b=>{ if(b.textContent.startsWith(currentQ.answer+'.')) b.className='choice-btn reveal'; });
 }
 
-function closeQuestion() {
-  document.getElementById('q-modal').classList.remove('open');
-  renderBoard();
-}
-
-function resetScores() { for (let i=1;i<=12;i++) scores['G'+i]=0; selectedGroup=null; renderBoard(); }
+function closeQuestion() { document.getElementById('q-modal').classList.remove('open'); renderBoard(); }
+function resetScores() { for(let i=1;i<=12;i++) scores['G'+i]=0; selectedGroup=null; renderBoard(); }
 function resetBoard() { usedCells={}; resetScores(); }
 
-window.addEventListener('load', startGame);
-
-function openEdit() {
-  editTabIdx = 0;
-  document.getElementById('edit-modal').classList.add('open');
-  renderEditTabs(); renderEditForm();
-}
+function openEdit() { editTabIdx=0; document.getElementById('edit-modal').classList.add('open'); renderEditTabs(); renderEditForm(); }
 function closeEdit() { document.getElementById('edit-modal').classList.remove('open'); }
 function renderEditTabs() {
-  const tabs = document.getElementById('edit-tabs');
-  tabs.innerHTML = '';
-  questions.chapters.forEach((ch,i) => {
-    const b = document.createElement('button');
-    b.className = 'etab' + (i===editTabIdx?' active':'');
-    b.textContent = ch.title;
-    b.onclick = () => { editTabIdx=i; renderEditTabs(); renderEditForm(); };
-    tabs.appendChild(b);
-  });
+  const tabs=document.getElementById('edit-tabs'); tabs.innerHTML='';
+  questions.chapters.forEach((ch,i)=>{ const b=document.createElement('button'); b.className='etab'+(i===editTabIdx?' active':''); b.textContent=ch.title; b.onclick=()=>{editTabIdx=i;renderEditTabs();renderEditForm();}; tabs.appendChild(b); });
 }
 function renderEditForm() {
-  const ch = questions.chapters[editTabIdx];
-  const f = document.getElementById('edit-form');
-  f.innerHTML = '';
-  ch.questions.forEach((q,qi) => {
-    const d = document.createElement('div');
-    d.className = 'eq-block';
-    d.innerHTML = '<div class="pts-tag">$'+q.points+'</div>'
-      + '<label>Question</label><textarea id="eq-q-'+qi+'">'+q.question+'</textarea>'
-      + '<label>Choice A</label><input id="eq-a-'+qi+'" value="'+q.choices[0].replace('A. ','')+'">'
-      + '<label>Choice B</label><input id="eq-b-'+qi+'" value="'+q.choices[1].replace('B. ','')+'">'
-      + '<label>Choice C</label><input id="eq-c-'+qi+'" value="'+q.choices[2].replace('C. ','')+'">'
-      + '<label>Choice D</label><input id="eq-d-'+qi+'" value="'+q.choices[3].replace('D. ','')+'">'
-      + '<label>Correct Answer</label><select id="eq-ans-'+qi+'">'
-      + ['A','B','C','D'].map(l=>'<option value="'+l+'"'+(q.answer===l?' selected':'')+'>'+l+'</option>').join('')
-      + '</select>';
-    f.appendChild(d);
-  });
+  const ch=questions.chapters[editTabIdx], f=document.getElementById('edit-form'); f.innerHTML='';
+  ch.questions.forEach((q,qi)=>{ const d=document.createElement('div'); d.className='eq-block'; d.innerHTML='<div class="pts-tag">$'+q.points+'</div><label>Question</label><textarea id="eq-q-'+qi+'">'+q.question+'</textarea><label>Choice A</label><input id="eq-a-'+qi+'" value="'+q.choices[0].replace('A. ','')+'"><label>Choice B</label><input id="eq-b-'+qi+'" value="'+q.choices[1].replace('B. ','')+'"><label>Choice C</label><input id="eq-c-'+qi+'" value="'+q.choices[2].replace('C. ','')+'"><label>Choice D</label><input id="eq-d-'+qi+'" value="'+q.choices[3].replace('D. ','')+'"><label>Correct Answer</label><select id="eq-ans-'+qi+'">'+['A','B','C','D'].map(l=>'<option value="'+l+'"'+(q.answer===l?' selected':'')+'>'+l+'</option>').join('')+'</select>'; f.appendChild(d); });
 }
 function saveEdits() {
-  const ch = questions.chapters[editTabIdx];
-  ch.questions.forEach((q,qi) => {
-    q.question = document.getElementById('eq-q-'+qi).value;
-    q.choices = ['A. '+document.getElementById('eq-a-'+qi).value,'B. '+document.getElementById('eq-b-'+qi).value,'C. '+document.getElementById('eq-c-'+qi).value,'D. '+document.getElementById('eq-d-'+qi).value];
-    q.answer = document.getElementById('eq-ans-'+qi).value;
-  });
+  const ch=questions.chapters[editTabIdx];
+  ch.questions.forEach((q,qi)=>{ q.question=document.getElementById('eq-q-'+qi).value; q.choices=['A. '+document.getElementById('eq-a-'+qi).value,'B. '+document.getElementById('eq-b-'+qi).value,'C. '+document.getElementById('eq-c-'+qi).value,'D. '+document.getElementById('eq-d-'+qi).value]; q.answer=document.getElementById('eq-ans-'+qi).value; });
   closeEdit(); renderBoard();
 }
 
+renderBoard();
+startBuzzerListener();
+</script>
+</body>
+</html>
