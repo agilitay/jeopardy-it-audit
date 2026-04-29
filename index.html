@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IT Audit Jeopardy – Teacher Board</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
   :root {
     --blue-dark: #042C53; --blue-mid: #185FA5; --blue-light: #E6F1FB;
@@ -91,13 +92,14 @@
   <div class="top-bar">
     <h1>⚡ IT AUDIT JEOPARDY</h1>
     <div class="top-bar-btns">
-      <button class="btn-sm" onclick="showShareInfo()">📱 Student Link</button>
+      <button class="btn-sm" onclick="showShareInfo()">📱 Student QR Code</button>
+      <button class="btn-sm" id="audio-btn" onclick="unlockAudio()">🔇 Enable Sound</button>
       <button class="btn-sm" onclick="openEdit()">✏️ Edit Questions</button>
       <button class="btn-sm" onclick="resetScores()">↺ Reset Scores</button>
       <button class="btn-sm" onclick="resetBoard()">🆕 New Game</button>
     </div>
   </div>
-  <div id="share-box" class="share-box" style="display:none;"></div>
+  <div id="share-box" class="share-box" style="display:none;"><strong>📱 Student Buzzer — scan or share link:</strong><div id="qrcode" style="margin:10px auto;width:fit-content;background:#fff;padding:8px;border-radius:6px;"></div><code id="share-url"></code></div>
   <div class="conn-bar">
     <div class="conn-dot waiting" id="conn-dot"></div>
     <span class="conn-label" id="conn-label">Connecting to buzzer channel...</span>
@@ -239,9 +241,15 @@ function handleBuzz(groupKey) {
 
 function showShareInfo() {
   const box = document.getElementById('share-box');
-  const url = window.location.href.replace('index.html','') + 'buzz.html';
-  box.style.display = box.style.display==='none' ? 'block' : 'none';
-  box.innerHTML = '<strong>📱 Share this link with students:</strong><br><code>' + url + '</code>';
+  const isHidden = box.style.display === 'none';
+  box.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    const url = window.location.href.replace('index.html','').replace(/\/$/, '') + '/buzz.html';
+    document.getElementById('share-url').textContent = url;
+    const qrDiv = document.getElementById('qrcode');
+    qrDiv.innerHTML = '';
+    new QRCode(qrDiv, { text: url, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M });
+  }
 }
 
 function renderBoard() {
@@ -335,8 +343,29 @@ function saveEdits() {
 }
 
 // ── AUDIO ─────────────────────────────────────────────────────────────
+let audioCtx = null;
+
+function unlockAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  // Play a silent buffer to fully unlock
+  const buf = audioCtx.createBuffer(1, 1, 22050);
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf; src.connect(audioCtx.destination); src.start();
+  const btn = document.getElementById('audio-btn');
+  btn.textContent = '🔊 Sound On';
+  btn.style.background = 'rgba(129,199,132,0.3)';
+  btn.onclick = null;
+}
+
+function getCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
 function playCorrect() {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const ctx = getCtx();
   // Happy ascending chime: C E G high-C
   const notes = [523, 659, 784, 1047];
   notes.forEach((freq, i) => {
@@ -354,7 +383,7 @@ function playCorrect() {
 }
 
 function playWrong() {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const ctx = getCtx();
   // Descending buzz: two low tones
   const notes = [220, 160];
   notes.forEach((freq, i) => {
@@ -372,7 +401,7 @@ function playWrong() {
 }
 
 function playBuzzIn() {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const ctx = getCtx();
   // Short sharp buzz-in sound
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
