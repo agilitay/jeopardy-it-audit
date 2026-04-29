@@ -119,6 +119,7 @@
       <button class="btn-sm" onclick="showShareInfo()">📱 Student QR Code</button>
       <button class="btn-sm" id="audio-btn" onclick="unlockAudio()">🔇 Enable Sound</button>
       <button class="btn-sm" onclick="openEdit()">✏️ Edit Questions</button>
+      <button class="btn-sm" onclick="openScoreEditAll()">✏️ Edit Scores</button>
       <button class="btn-sm" onclick="resetScores()">↺ Reset Scores</button>
       <button class="btn-sm" onclick="resetBoard()">🆕 New Game</button>
     </div>
@@ -149,6 +150,20 @@
     <div class="q-footer">
       <button class="btn-outline" onclick="closeQuestion()">← Back to Board</button>
 
+    </div>
+  </div>
+</div>
+
+<div id="score-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:12px;padding:1.5rem;width:100%;max-width:340px;">
+    <h3 style="margin-bottom:1rem;font-size:16px;font-weight:600;" id="score-edit-title">Edit Score</h3>
+    <label style="font-size:13px;color:#666;display:block;margin-bottom:4px;">Team Name</label>
+    <input id="score-edit-name" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:14px;margin-bottom:12px;" placeholder="Team name" />
+    <label style="font-size:13px;color:#666;display:block;margin-bottom:4px;">Score</label>
+    <input id="score-edit-val" type="number" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:14px;margin-bottom:1.5rem;" />
+    <div style="display:flex;gap:8px;">
+      <button onclick="saveScoreEdit()" style="flex:1;background:#185FA5;color:#fff;border:none;border-radius:8px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;">Save</button>
+      <button onclick="closeScoreEdit()" style="flex:1;background:transparent;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:14px;cursor:pointer;">Cancel</button>
     </div>
   </div>
 </div>
@@ -254,6 +269,7 @@ let currentQ = null, currentCi = null, currentQi = null, editTabIdx = 0;
 let eventSource = null, lastEventId = null;
 
 for (let i = 1; i <= 12; i++) scores['G'+i] = 0;
+let groupNames = {}; // stores custom display names keyed by G1..G12
 
 // ── NTFY LISTENER ─────────────────────────────────────────────────────
 function startBuzzerListener() {
@@ -323,6 +339,38 @@ function goToRoundSelect() {
   document.getElementById('round-select-screen').style.display = 'flex';
 }
 
+let scoreEditKey = null;
+
+function openScoreEdit(key) {
+  scoreEditKey = key;
+  document.getElementById('score-edit-title').textContent = 'Edit ' + (groupNames[key]||key.replace('G','Group '));
+  document.getElementById('score-edit-name').value = groupNames[key]||'';
+  document.getElementById('score-edit-name').placeholder = key.replace('G','Group ');
+  document.getElementById('score-edit-val').value = scores[key];
+  const m = document.getElementById('score-edit-modal');
+  m.style.display='flex';
+}
+
+function openScoreEditAll() {
+  // Open edit for first group as entry point — user can navigate
+  openScoreEdit('G1');
+}
+
+function saveScoreEdit() {
+  if(!scoreEditKey) return;
+  const newName = document.getElementById('score-edit-name').value.trim();
+  const newScore = parseInt(document.getElementById('score-edit-val').value);
+  if(newName) groupNames[scoreEditKey]=newName;
+  if(!isNaN(newScore)) scores[scoreEditKey]=newScore;
+  closeScoreEdit();
+  renderBoard();
+}
+
+function closeScoreEdit() {
+  document.getElementById('score-edit-modal').style.display='none';
+  scoreEditKey=null;
+}
+
 function renderBoard() {
   const sb = document.getElementById('scoreboard');
   sb.innerHTML = '';
@@ -330,8 +378,11 @@ function renderBoard() {
     const key='G'+i, pts=scores[key];
     const div=document.createElement('div');
     div.className='score-cell'+(selectedGroup===key?' selected':'');
-    div.innerHTML='<div class="grp">Grp '+i+'</div><div class="pts'+(pts<0?' neg':'')+'">'+pts+'</div>';
+    const displayName=groupNames[key]||('Grp '+i);
+    const shortName=displayName.length>8?displayName.substring(0,7)+'…':displayName;
+    div.innerHTML='<div class="grp" title="'+displayName+'">'+shortName+'</div><div class="pts'+(pts<0?' neg':'')+'">'+pts+'</div>';
     div.onclick=()=>{ selectedGroup=selectedGroup===key?null:key; renderBoard(); };
+    div.ondblclick=(e)=>{ e.stopPropagation(); openScoreEdit(key); };
     sb.appendChild(div);
   }
   const board=document.getElementById('jboard');
@@ -374,7 +425,7 @@ function openQuestion(ci,qi) {
 
 function setBuzzedInModal(key) {
   buzzedGroup=key;
-  document.getElementById('buzz-who').textContent='🔔 '+key.replace('G','Group ')+' buzzed in! Click their answer:';
+  document.getElementById('buzz-who').textContent='🔔 '+(groupNames[key]||key.replace('G','Group '))+' buzzed in! Click their answer:';
   document.querySelectorAll('.grp-btn').forEach((b,i)=>{ b.className='grp-btn'+('G'+(i+1)===key?' active':''); });
   document.querySelectorAll('.choice-btn').forEach(b=>{ if(!b.classList.contains('wrong-pick')) b.disabled=false; });
 }
@@ -393,7 +444,7 @@ function choicePicked(letter) {
     scores[buzzedGroup]+=pts;
     playCorrect();
     ar.style.cssText='display:block;margin-bottom:1rem;padding:8px 12px;border-radius:8px;text-align:center;font-size:14px;font-weight:600;background:var(--green-bg);color:var(--green-text);border:1px solid var(--green-border);';
-    ar.textContent='✓ Correct! '+buzzedGroup.replace('G','Group ')+' +'+pts+' pts → '+scores[buzzedGroup];
+    ar.textContent='✓ Correct! '+(groupNames[buzzedGroup]||buzzedGroup.replace('G','Group '))+' +'+pts+' pts → '+scores[buzzedGroup];
     usedCells[currentCi+'-'+currentQi]=true;
     resetBuzzers();
   } else {
@@ -407,7 +458,7 @@ function choicePicked(letter) {
       usedCells[currentCi+'-'+currentQi]=true;
       resetBuzzers();
     } else {
-      ar.textContent='✗ Wrong! '+buzzedGroup.replace('G','Group ')+' -'+pts+' pts → '+scores[buzzedGroup]+' | One more group can buzz in!';
+      ar.textContent='✗ Wrong! '+(groupNames[buzzedGroup]||buzzedGroup.replace('G','Group '))+' -'+pts+' pts → '+scores[buzzedGroup]+' | One more group can buzz in!';
       buzzedGroup=null;
       document.querySelectorAll('.grp-btn').forEach(b=>b.className='grp-btn');
       document.getElementById('buzz-who').textContent='One more buzz-in allowed!';
