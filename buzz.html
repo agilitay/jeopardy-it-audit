@@ -40,7 +40,7 @@
 <div id="setup">
   <h1>⚡ Buzzer</h1>
   <p>IT Audit Jeopardy</p>
-  <select id="group-select">
+  <select id="group-select" onchange="syncNameFromGroup()">
     <option value="">-- Select your group --</option>
     <option value="G1">Group 1</option><option value="G2">Group 2</option>
     <option value="G3">Group 3</option><option value="G4">Group 4</option>
@@ -49,6 +49,8 @@
     <option value="G9">Group 9</option><option value="G10">Group 10</option>
     <option value="G11">Group 11</option><option value="G12">Group 12</option>
   </select>
+  <p style="font-size:12px;color:rgba(255,255,255,0.4);margin:-0.5rem 0 0.5rem;">Optional: enter a custom team name</p>
+  <input id="group-name" placeholder="e.g. The Auditors" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#fff;font-size:15px;margin-bottom:1rem;" />
   <button class="btn-join" onclick="joinGame()">Join Game</button>
 </div>
 
@@ -66,16 +68,27 @@ const NTFY_TOPIC = 'jeopardy-itaudit-agilitay-room1';
 const NTFY_URL   = 'https://ntfy.sh/' + NTFY_TOPIC;
 
 let myGroup = '';
+let myDisplayName = '';
 let locked = false;
+
+function syncNameFromGroup() {
+  const grp = document.getElementById('group-select').value;
+  const nameField = document.getElementById('group-name');
+  if (grp && !nameField.value) {
+    nameField.placeholder = grp.replace('G','Group ');
+  }
+}
 
 function joinGame() {
   const grp = document.getElementById('group-select').value;
   if (!grp) { alert('Please select your group number.'); return; }
+  const customName = document.getElementById('group-name').value.trim();
   myGroup = grp;
+  myDisplayName = customName || grp.replace('G','Group ');
   document.getElementById('setup').style.display = 'none';
   const buz = document.getElementById('buzzer');
   buz.style.display = 'flex';
-  document.getElementById('group-display').textContent = grp.replace('G','Group ');
+  document.getElementById('group-display').textContent = myDisplayName;
   startResetListener();
 }
 
@@ -111,7 +124,7 @@ async function buzz() {
   try {
     const res = await fetch(NTFY_URL, {
       method: 'POST',
-      body: 'BUZZ:' + myGroup,
+      body: 'BUZZ:' + myGroup + ':' + myDisplayName,
       headers: { 'Content-Type': 'text/plain' }
     });
     if (res.ok) {
