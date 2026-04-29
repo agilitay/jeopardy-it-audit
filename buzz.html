@@ -92,15 +92,44 @@ function joinGame() {
   startResetListener();
 }
 
+let lastResetId = null;
+
 function startResetListener() {
-  const es = new EventSource(NTFY_URL + '/sse');
-  es.onmessage = (e) => {
+  // Primary: SSE stream
+  function connectSSE() {
+    const es = new EventSource(NTFY_URL + '/sse');
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        const msg = data.message || '';
+        if (msg === 'RESET') unlockBuzzer();
+      } catch(_) {}
+    };
+    es.onerror = () => {
+      es.close();
+      setTimeout(connectSSE, 3000); // reconnect on error
+    };
+  }
+  connectSSE();
+
+  // Fallback: poll every 2 seconds for a RESET message
+  setInterval(async () => {
+    if (!locked) return; // already unlocked, nothing to do
     try {
-      const data = JSON.parse(e.data);
-      const msg = data.message || '';
-      if (msg === 'RESET') unlockBuzzer();
+      const res = await fetch(NTFY_URL + '/json?poll=1&since=10s', { cache: 'no-store' });
+      const text = await res.text();
+      const lines = text.trim().split('\n').filter(Boolean);
+      for (const line of lines) {
+        try {
+          const obj = JSON.parse(line);
+          if (obj.message === 'RESET' && obj.id !== lastResetId) {
+            lastResetId = obj.id;
+            unlockBuzzer();
+          }
+        } catch(_) {}
+      }
     } catch(_) {}
-  };
+  }, 2000);
 }
 
 function unlockBuzzer() {
