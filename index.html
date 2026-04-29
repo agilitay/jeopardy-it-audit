@@ -445,6 +445,7 @@ function choicePicked(letter) {
     playCorrect();
     ar.style.cssText='display:block;margin-bottom:1rem;padding:8px 12px;border-radius:8px;text-align:center;font-size:14px;font-weight:600;background:var(--green-bg);color:var(--green-text);border:1px solid var(--green-border);';
     ar.textContent='✓ Correct! '+(groupNames[buzzedGroup]||buzzedGroup.replace('G','Group '))+' +'+pts+' pts → '+scores[buzzedGroup];
+    renderBoard(); // update scoreboard immediately
     usedCells[currentCi+'-'+currentQi]=true;
     resetBuzzers();
   } else {
@@ -452,6 +453,7 @@ function choicePicked(letter) {
     playWrong();
     wrongAnswers.push(letter);
     ar.style.cssText='display:block;margin-bottom:1rem;padding:8px 12px;border-radius:8px;text-align:center;font-size:14px;font-weight:600;background:var(--red-bg);color:var(--red-text);border:1px solid var(--red-border);';
+    renderBoard(); // update scoreboard immediately
     if(wrongAnswers.length >= 2) {
       ar.textContent='✗ Two wrong answers — correct answer shown!';
       revealAnswer();
