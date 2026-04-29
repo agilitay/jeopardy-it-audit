@@ -52,8 +52,11 @@
   .q-text { font-size: 18px; font-weight: 500; line-height: 1.6; padding: 1.25rem; background: var(--gray-bg); border-radius: var(--radius); margin-bottom: 1.25rem; }
   .choices { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.25rem; }
   .choice-btn { background: var(--surface); border: 1px solid var(--gray-border); border-radius: var(--radius); padding: 10px 16px; text-align: left; font-size: 14px; cursor: pointer; transition: all 0.12s; }
-  .choice-btn:hover { background: var(--gray-bg); }
+  .choice-btn:hover:not(:disabled) { background: var(--gray-bg); }
   .choice-btn.reveal { background: var(--green-bg); border-color: var(--green-border); color: var(--green-text); font-weight: 600; }
+  .choice-btn.wrong-pick { background: var(--red-bg); border-color: var(--red-border); color: var(--red-text); font-weight: 600; cursor: default; }
+  .choice-btn.eliminated { background: #f0f0f0; border-color: #ccc; color: #aaa; cursor: default; text-decoration: line-through; }
+  .choice-btn:disabled { cursor: default; }
   .buzz-in-section { background: var(--amber-bg); border: 1px solid var(--amber-border); border-radius: var(--radius); padding: 12px; margin-bottom: 1rem; }
   .buzz-who { font-size: 15px; font-weight: 600; color: var(--amber-text); margin-bottom: 8px; }
   .group-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
@@ -142,13 +145,10 @@
       <div class="buzz-who" id="buzz-who">Waiting for buzz-in... or click a group below:</div>
       <div class="group-grid" id="grp-grid"></div>
     </div>
-    <div class="answer-row" id="answer-row" style="display:none;">
-      <button class="btn-correct" onclick="markAnswer(true)">✓ Correct (+pts)</button>
-      <button class="btn-wrong" onclick="markAnswer(false)">✗ Wrong (−pts)</button>
-    </div>
+    <div id="answer-row" style="display:none;margin-bottom:1rem;font-size:14px;font-weight:600;padding:8px 12px;border-radius:var(--radius);text-align:center;"></div>
     <div class="q-footer">
       <button class="btn-outline" onclick="closeQuestion()">← Back to Board</button>
-      <button class="btn-outline" onclick="revealAnswer()">👁 Show Answer</button>
+
     </div>
   </div>
 </div>
@@ -347,51 +347,86 @@ function renderBoard() {
   });
 }
 
+let wrongAnswers = [];
+
 function openQuestion(ci,qi) {
   currentCi=ci; currentQi=qi; currentQ=questions.chapters[ci].questions[qi]; buzzedGroup=null;
+  wrongAnswers=[];
   document.getElementById('buzz-indicator').style.display='none';
   document.getElementById('q-cat').textContent=questions.chapters[ci].title;
   document.getElementById('q-pts').textContent='$'+currentQ.points;
   document.getElementById('q-text').textContent=currentQ.question;
   const cc=document.getElementById('q-choices'); cc.innerHTML='';
-  currentQ.choices.forEach(c=>{ const b=document.createElement('button'); b.className='choice-btn'; b.textContent=c; cc.appendChild(b); });
+  currentQ.choices.forEach(c=>{
+    const letter=c.charAt(0);
+    const b=document.createElement('button');
+    b.className='choice-btn'; b.textContent=c; b.dataset.letter=letter;
+    b.disabled=true;
+    b.onclick=()=>choicePicked(letter);
+    cc.appendChild(b);
+  });
   const gg=document.getElementById('grp-grid'); gg.innerHTML='';
   document.getElementById('buzz-who').textContent='Waiting for buzz-in... or click a group below:';
-  document.getElementById('answer-row').style.display='none';
+  const ar=document.getElementById('answer-row'); ar.style.display='none'; ar.textContent='';
   for(let i=1;i<=12;i++){ const key='G'+i,b=document.createElement('button'); b.className='grp-btn'; b.textContent='Grp '+i; b.onclick=()=>setBuzzedInModal(key); gg.appendChild(b); }
   document.getElementById('q-modal').classList.add('open');
 }
 
 function setBuzzedInModal(key) {
   buzzedGroup=key;
-  document.getElementById('buzz-who').textContent='🔔 '+key.replace('G','Group ')+' buzzed in!';
+  document.getElementById('buzz-who').textContent='🔔 '+key.replace('G','Group ')+' buzzed in! Click their answer:';
   document.querySelectorAll('.grp-btn').forEach((b,i)=>{ b.className='grp-btn'+('G'+(i+1)===key?' active':''); });
-  document.getElementById('answer-row').style.display='flex';
+  document.querySelectorAll('.choice-btn').forEach(b=>{ if(!b.classList.contains('wrong-pick')) b.disabled=false; });
 }
 
-function markAnswer(correct) {
-  if(!buzzedGroup||!currentQ) return;
+function choicePicked(letter) {
+  if(!buzzedGroup) return;
+  const correct=(letter===currentQ.answer);
   const pts=currentQ.points;
-  scores[buzzedGroup]+=correct?pts:-pts;
-  if(correct) { revealAnswer(); playCorrect(); } else { playWrong(); }
-  usedCells[currentCi+'-'+currentQi]=true;
-  document.getElementById('answer-row').style.display='none';
-  document.getElementById('buzz-who').textContent=(correct?'✓ Correct! ':'✗ Wrong! ')+buzzedGroup.replace('G','Group ')+': '+(correct?'+':'-')+pts+' pts → '+scores[buzzedGroup];
-  resetBuzzers();
-}
-
-function resetBuzzers() {
-  fetch(NTFY_URL, {
-    method: 'POST',
-    body: 'RESET',
-    headers: { 'Content-Type': 'text/plain' }
-  }).catch(()=>{});
+  document.querySelectorAll('.choice-btn').forEach(b=>{
+    if(b.dataset.letter===letter) b.className=correct?'choice-btn reveal':'choice-btn wrong-pick';
+    b.disabled=true;
+  });
+  const ar=document.getElementById('answer-row');
+  ar.style.display='block';
+  if(correct) {
+    scores[buzzedGroup]+=pts;
+    playCorrect();
+    ar.style.cssText='display:block;margin-bottom:1rem;padding:8px 12px;border-radius:8px;text-align:center;font-size:14px;font-weight:600;background:var(--green-bg);color:var(--green-text);border:1px solid var(--green-border);';
+    ar.textContent='✓ Correct! '+buzzedGroup.replace('G','Group ')+' +'+pts+' pts → '+scores[buzzedGroup];
+    usedCells[currentCi+'-'+currentQi]=true;
+    resetBuzzers();
+  } else {
+    scores[buzzedGroup]-=pts;
+    playWrong();
+    wrongAnswers.push(letter);
+    ar.style.cssText='display:block;margin-bottom:1rem;padding:8px 12px;border-radius:8px;text-align:center;font-size:14px;font-weight:600;background:var(--red-bg);color:var(--red-text);border:1px solid var(--red-border);';
+    if(wrongAnswers.length >= 2) {
+      ar.textContent='✗ Two wrong answers — correct answer shown!';
+      revealAnswer();
+      usedCells[currentCi+'-'+currentQi]=true;
+      resetBuzzers();
+    } else {
+      ar.textContent='✗ Wrong! '+buzzedGroup.replace('G','Group ')+' -'+pts+' pts → '+scores[buzzedGroup]+' | One more group can buzz in!';
+      buzzedGroup=null;
+      document.querySelectorAll('.grp-btn').forEach(b=>b.className='grp-btn');
+      document.getElementById('buzz-who').textContent='One more buzz-in allowed!';
+      setTimeout(()=>resetBuzzers(), 300);
+    }
+  }
 }
 
 function revealAnswer() {
   if(!currentQ) return;
-  document.querySelectorAll('.choice-btn').forEach(b=>{ if(b.textContent.startsWith(currentQ.answer+'.')) b.className='choice-btn reveal'; });
+  document.querySelectorAll('.choice-btn').forEach(b=>{
+    if(b.dataset.letter===currentQ.answer) b.className='choice-btn reveal';
+    else if(!b.classList.contains('wrong-pick')) b.className='choice-btn eliminated';
+    b.disabled=true;
+  });
 }
+
+function markAnswer(correct) {}
+
 
 function closeQuestion() { document.getElementById('q-modal').classList.remove('open'); renderBoard(); resetBuzzers(); }
 function resetScores() { for(let i=1;i<=12;i++) scores['G'+i]=0; selectedGroup=null; renderBoard(); }
