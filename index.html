@@ -88,10 +88,31 @@
 </style>
 </head>
 <body>
-<div id="game-screen">
+<div id="round-select-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;">
+  <div style="text-align:center;color:#fff;max-width:500px;width:100%;">
+    <div style="font-size:44px;margin-bottom:0.5rem;">⚡</div>
+    <div style="font-size:26px;font-weight:700;letter-spacing:2px;margin-bottom:0.5rem;">IT AUDIT JEOPARDY</div>
+    <div style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:2.5rem;">Select a round to begin</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <button onclick="startRound(1)" style="background:#185FA5;color:#fff;border:none;border-radius:12px;padding:2rem 1rem;cursor:pointer;transition:background 0.15s;">
+        <div style="font-size:32px;margin-bottom:8px;">🎯</div>
+        <div style="font-size:20px;font-weight:700;">Round 1</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:6px;line-height:1.5;">Ch. 1 · Ch. 3 · Ch. 5<br>Ch. 6 · Ch. 9</div>
+      </button>
+      <button onclick="startRound(2)" style="background:#3B6D11;color:#fff;border:none;border-radius:12px;padding:2rem 1rem;cursor:pointer;transition:background 0.15s;">
+        <div style="font-size:32px;margin-bottom:8px;">🏆</div>
+        <div style="font-size:20px;font-weight:700;">Round 2</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:6px;line-height:1.5;">Ch. 10 · Ch. 11 · Ch. 12<br>Ch. 13</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="game-screen" style="display:none;">
   <div class="top-bar">
     <h1>⚡ IT AUDIT JEOPARDY</h1>
     <div class="top-bar-btns">
+      <button class="btn-sm" onclick="goToRoundSelect()">🔄 Switch Round</button>
       <button class="btn-sm" onclick="showShareInfo()">📱 Student QR Code</button>
       <button class="btn-sm" id="audio-btn" onclick="unlockAudio()">🔇 Enable Sound</button>
       <button class="btn-sm" onclick="openEdit()">✏️ Edit Questions</button>
@@ -192,7 +213,42 @@ const QUESTIONS = {
   ]
 };
 
+
+const ROUND2_QUESTIONS = {
+  chapters: [
+    { id:"ch10", title:"Change Control Mgt.", questions:[
+      { points:100, question:"What does CCM stand for and what is its primary purpose?", choices:["A. Centralized Change Monitoring — tracks all IT assets","B. Change Control Management — ensures effective implementation of changes in an IT environment","C. Computer Configuration Management — controls hardware inventory","D. Compliance Control Monitoring — ensures regulatory adherence"], answer:"B" },
+      { points:200, question:"Which of the following is an example of an EMERGENCY change?", choices:["A. A scheduled software upgrade planned three months in advance","B. Routine defragmentation of a hard disk during off-peak hours","C. A fix made quickly outside normal procedures to restore system performance","D. Adding a new user to the system during normal business hours"], answer:"C" },
+      { points:300, question:"What is the role of the Change Control Management Board/Committee?", choices:["A. To develop new software applications for the organization","B. To coordinate, communicate, review, and approve changes within an organization","C. To perform penetration testing on production systems","D. To manage daily IT helpdesk operations"], answer:"B" },
+      { points:400, question:"According to the GAO, ineffective change controls in federal agencies have resulted in which of the following?", choices:["A. Increased employee productivity and reduced costs","B. Unauthorized access and increased difficulty monitoring security violations","C. Faster software deployment and improved system performance","D. Better documentation and reduced audit findings"], answer:"B" },
+      { points:500, question:"Segregation of Duties (SoD) in the CCM process requires separation between which three roles?", choices:["A. Owner, Custodian, and User","B. Initiates, Approves, and Implements","C. Requests, Tests, and Documents","D. Plans, Executes, and Monitors"], answer:"B" }
+    ]},
+    { id:"ch11", title:"IS Operations", questions:[
+      { points:100, question:"What does BCP stand for in the context of IS Operations?", choices:["A. Backup Control Protocol","B. Business Continuity Plan","C. Basic Compliance Procedure","D. Backup and Contingency Planning"], answer:"B" },
+      { points:200, question:"What is the recommended control for managing access to programs, data files, and documentation in an IT environment?", choices:["A. Assign all access to the IT department manager","B. Allow all employees read access to all files","C. Assign a full-time independent data librarian","D. Store all files in a shared cloud folder"], answer:"C" },
+      { points:300, question:"Which of the following is NOT listed as a component of a Disaster Recovery Plan (DRP)?", choices:["A. Emergency telephone numbers","B. Employee relocation plans to alternate work sites","C. Marketing strategy for post-disaster communications","D. Full and incremental program and data backups"], answer:"C" },
+      { points:400, question:"According to a 2014 Forrester Consulting study referenced in Chapter 11, approximately what percentage of organizations were using or planning to use cloud backups?", choices:["A. 25%","B. 44%","C. 60%","D. 75%"], answer:"B" },
+      { points:500, question:"What is the primary concern organizations cite when unwilling to test their Disaster Recovery Plan?", choices:["A. Testing is too expensive to budget for annually","B. Staff lack the technical skills to conduct the test","C. Disruption to daily operations and fear a real disaster may arise from the test","D. Regulatory requirements prohibit live DRP testing"], answer:"C" }
+    ]},
+    { id:"ch12", title:"Information Security", questions:[
+      { points:100, question:"What are the three fundamental objectives of information security?", choices:["A. Prevention, Detection, and Response","B. Confidentiality, Availability, and Integrity","C. Authentication, Authorization, and Auditing","D. Privacy, Reliability, and Compliance"], answer:"B" },
+      { points:200, question:"Which cybercrime technique involves a fraudulent website that mimics a legitimate one?", choices:["A. Phishing","B. Spamming","C. Spoofing","D. Denial-of-Service Attack"], answer:"C" },
+      { points:300, question:"Which role is responsible for designating appropriate levels of criticality and defining which users will be granted access to information?", choices:["A. Information Custodians","B. Third-Party Contractors","C. End Users","D. Information Owners"], answer:"D" },
+      { points:400, question:"How many major security areas does ISO/IEC 27002 outline for potential information security controls?", choices:["A. 8","B. 10","C. 12","D. 15"], answer:"C" },
+      { points:500, question:"According to Herath & Rao (2009) referenced in Chapter 12, what is insufficient alone to maintain proper information security?", choices:["A. Security policies and employee training programs","B. Current security tools and technologies such as encryption and firewalls","C. Regular audits and penetration testing","D. Management oversight and governance frameworks"], answer:"B" }
+    ]},
+    { id:"ch13", title:"Systems Acquisition", questions:[
+      { points:100, question:"What begins once a contract is signed with a third-party IT vendor?", choices:["A. Systems Acquisition Process","B. Service Management","C. Outsourcing Negotiation","D. Feasibility Analysis"], answer:"B" },
+      { points:200, question:"What is 'off-shoring' in the context of outsourcing?", choices:["A. Transferring IT services to a subsidiary within the same country","B. Moving data storage to an offshore backup facility","C. Transferring service delivery to a third party outside the client's country","D. Outsourcing only non-critical business functions to reduce costs"], answer:"C" },
+      { points:300, question:"According to Chapter 13, what percentage of IT budget is spent on third-party vendors on average?", choices:["A. 20-30%","B. 45-60%","C. 65-75%","D. 80-90%"], answer:"B" },
+      { points:400, question:"What does a Type 2 Report from a service auditor describe, beyond what a Type 1 Report covers?", choices:["A. The financial statements of the service organization","B. The suitability of design AND operating effectiveness of controls throughout the audit period","C. The contract terms and SLA compliance of the service organization","D. The risk assessment and penetration test results"], answer:"B" },
+      { points:500, question:"Which AICPA standard requires user auditors to understand how their organization uses a service organization's services and the effect on internal control?", choices:["A. SSAE 16, section AT 801","B. SSAE 18","C. AICPA AU-C 402 (PCAOB 324)","D. ISO/IEC 27002"], answer:"C" }
+    ]}
+  ]
+};
+
 let questions = JSON.parse(JSON.stringify(QUESTIONS));
+let currentRound = 1;
 let usedCells = {}, scores = {}, selectedGroup = null, buzzedGroup = null;
 let currentQ = null, currentCi = null, currentQi = null, editTabIdx = 0;
 let eventSource = null, lastEventId = null;
@@ -250,6 +306,21 @@ function showShareInfo() {
     qrDiv.innerHTML = '';
     new QRCode(qrDiv, { text: url, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M });
   }
+}
+
+function startRound(round) {
+  currentRound = round;
+  questions = JSON.parse(JSON.stringify(round === 1 ? QUESTIONS : ROUND2_QUESTIONS));
+  usedCells = {}; scores = {}; selectedGroup = null;
+  for (let i=1;i<=12;i++) scores['G'+i]=0;
+  document.getElementById('round-select-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'block';
+  renderBoard();
+}
+
+function goToRoundSelect() {
+  document.getElementById('game-screen').style.display = 'none';
+  document.getElementById('round-select-screen').style.display = 'flex';
 }
 
 function renderBoard() {
@@ -415,7 +486,6 @@ function playBuzzIn() {
 }
 // ──────────────────────────────────────────────────────────────────────
 
-renderBoard();
 startBuzzerListener();
 </script>
 </body>
