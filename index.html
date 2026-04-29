@@ -399,10 +399,12 @@ function renderBoard() {
 }
 
 let wrongAnswers = [];
+let pendingReset = false;
 
 function openQuestion(ci,qi) {
   currentCi=ci; currentQi=qi; currentQ=questions.chapters[ci].questions[qi]; buzzedGroup=null;
   wrongAnswers=[];
+  pendingReset=false;
   document.getElementById('buzz-indicator').style.display='none';
   document.getElementById('q-cat').textContent=questions.chapters[ci].title;
   document.getElementById('q-pts').textContent='$'+currentQ.points;
@@ -449,7 +451,7 @@ function choicePicked(letter) {
     ar.textContent='✓ Correct! '+(groupNames[buzzedGroup]||buzzedGroup.replace('G','Group '))+' +'+pts+' pts → '+scores[buzzedGroup];
     renderBoard(); // update scoreboard immediately
     usedCells[currentCi+'-'+currentQi]=true;
-    resetBuzzers();
+    pendingReset=true; // reset buzzers when teacher closes question
   } else {
     scores[buzzedGroup]-=pts;
     playWrong();
@@ -460,7 +462,7 @@ function choicePicked(letter) {
       ar.textContent='✗ Two wrong answers — correct answer shown!';
       revealAnswer();
       usedCells[currentCi+'-'+currentQi]=true;
-      resetBuzzers();
+      pendingReset=true; // reset buzzers when teacher closes question
     } else {
       ar.textContent='✗ Wrong! '+(groupNames[buzzedGroup]||buzzedGroup.replace('G','Group '))+' -'+pts+' pts → '+scores[buzzedGroup]+' | One more group can buzz in!';
       buzzedGroup=null;
@@ -483,7 +485,12 @@ function revealAnswer() {
 function markAnswer(correct) {}
 
 
-function closeQuestion() { document.getElementById('q-modal').classList.remove('open'); renderBoard(); resetBuzzers(); }
+function closeQuestion() {
+  document.getElementById('q-modal').classList.remove('open');
+  renderBoard();
+  resetBuzzers(); // always reset on close
+  pendingReset=false;
+}
 function resetScores() { for(let i=1;i<=12;i++) scores['G'+i]=0; selectedGroup=null; renderBoard(); }
 function resetBoard() { usedCells={}; resetScores(); }
 
