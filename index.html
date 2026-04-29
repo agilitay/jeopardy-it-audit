@@ -430,45 +430,55 @@ function setBuzzedInModal(key) {
   document.getElementById('buzz-who').textContent='🔔 '+(groupNames[key]||key.replace('G','Group '))+' buzzed in! Click their answer:';
   document.querySelectorAll('.grp-btn').forEach((b,i)=>{ b.className='grp-btn'+('G'+(i+1)===key?' active':''); });
   document.querySelectorAll('.choice-btn').forEach(b=>{ if(!b.classList.contains('wrong-pick')) b.disabled=false; });
-  // Reset all buzzers so the group that already buzzed can buzz again on next question
-  resetBuzzers();
 }
 
 function choicePicked(letter) {
   if(!buzzedGroup) return;
-  const correct=(letter===currentQ.answer);
-  const pts=currentQ.points;
-  document.querySelectorAll('.choice-btn').forEach(b=>{
-    if(b.dataset.letter===letter) b.className=correct?'choice-btn reveal':'choice-btn wrong-pick';
-    b.disabled=true;
+  // Snapshot these immediately so async events can't change them mid-function
+  const scoringGroup = buzzedGroup;
+  const correct = (letter === currentQ.answer);
+  const pts = currentQ.points;
+
+  // Disable all choice buttons and mark the picked one
+  document.querySelectorAll('.choice-btn').forEach(b => {
+    b.disabled = true;
+    if(b.dataset.letter === letter) b.className = correct ? 'choice-btn reveal' : 'choice-btn wrong-pick';
   });
-  const ar=document.getElementById('answer-row');
-  ar.style.display='block';
+
+  const ar = document.getElementById('answer-row');
+  ar.style.display = 'block';
+
   if(correct) {
-    scores[buzzedGroup]+=pts;
+    scores[scoringGroup] += pts;
     playCorrect();
-    ar.style.cssText='display:block;margin-bottom:1rem;padding:8px 12px;border-radius:8px;text-align:center;font-size:14px;font-weight:600;background:var(--green-bg);color:var(--green-text);border:1px solid var(--green-border);';
-    ar.textContent='✓ Correct! '+(groupNames[buzzedGroup]||buzzedGroup.replace('G','Group '))+' +'+pts+' pts → '+scores[buzzedGroup];
-    renderBoard(); // update scoreboard immediately
-    usedCells[currentCi+'-'+currentQi]=true;
-    pendingReset=true; // reset buzzers when teacher closes question
+    ar.style.cssText = 'display:block;margin-bottom:1rem;padding:8px 12px;border-radius:8px;text-align:center;font-size:14px;font-weight:600;background:var(--green-bg);color:var(--green-text);border:1px solid var(--green-border);';
+    ar.textContent = '✓ Correct! ' + (groupNames[scoringGroup]||scoringGroup.replace('G','Group ')) + ' +' + pts + ' pts → ' + scores[scoringGroup];
+    usedCells[currentCi+'-'+currentQi] = true;
+    renderBoard();
+    // Don't reset buzzers yet — wait until teacher closes the question
   } else {
-    scores[buzzedGroup]-=pts;
+    scores[scoringGroup] -= pts;
     playWrong();
     wrongAnswers.push(letter);
-    ar.style.cssText='display:block;margin-bottom:1rem;padding:8px 12px;border-radius:8px;text-align:center;font-size:14px;font-weight:600;background:var(--red-bg);color:var(--red-text);border:1px solid var(--red-border);';
-    renderBoard(); // update scoreboard immediately
+    ar.style.cssText = 'display:block;margin-bottom:1rem;padding:8px 12px;border-radius:8px;text-align:center;font-size:14px;font-weight:600;background:var(--red-bg);color:var(--red-text);border:1px solid var(--red-border);';
+    renderBoard();
     if(wrongAnswers.length >= 2) {
-      ar.textContent='✗ Two wrong answers — correct answer shown!';
+      ar.textContent = '✗ Two wrong answers — correct answer shown!';
       revealAnswer();
-      usedCells[currentCi+'-'+currentQi]=true;
-      pendingReset=true; // reset buzzers when teacher closes question
+      usedCells[currentCi+'-'+currentQi] = true;
+      // Don't reset buzzers yet — wait until teacher closes the question
     } else {
-      ar.textContent='✗ Wrong! '+(groupNames[buzzedGroup]||buzzedGroup.replace('G','Group '))+' -'+pts+' pts → '+scores[buzzedGroup]+' | One more group can buzz in!';
-      buzzedGroup=null;
-      document.querySelectorAll('.grp-btn').forEach(b=>b.className='grp-btn');
-      document.getElementById('buzz-who').textContent='One more buzz-in allowed!';
-      setTimeout(()=>resetBuzzers(), 300);
+      ar.textContent = '✗ Wrong! ' + (groupNames[scoringGroup]||scoringGroup.replace('G','Group ')) + ' -' + pts + ' pts → ' + scores[scoringGroup] + ' | One more group can buzz in!';
+      buzzedGroup = null;
+      document.querySelectorAll('.grp-btn').forEach(b => b.className='grp-btn');
+      document.getElementById('buzz-who').textContent = 'One more buzz-in allowed!';
+      // Re-enable remaining (non-wrong) choices for next buzzer
+      document.querySelectorAll('.choice-btn').forEach(b => {
+        if(!b.classList.contains('wrong-pick')) b.disabled = false;
+      });
+      // Disable them again immediately — only enable when next group buzzes in
+      document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+      resetBuzzers(); // unlock all student buzzers for next buzz-in
     }
   }
 }
