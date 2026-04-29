@@ -428,6 +428,8 @@ function setBuzzedInModal(key) {
   document.getElementById('buzz-who').textContent='🔔 '+(groupNames[key]||key.replace('G','Group '))+' buzzed in! Click their answer:';
   document.querySelectorAll('.grp-btn').forEach((b,i)=>{ b.className='grp-btn'+('G'+(i+1)===key?' active':''); });
   document.querySelectorAll('.choice-btn').forEach(b=>{ if(!b.classList.contains('wrong-pick')) b.disabled=false; });
+  // Reset all buzzers so the group that already buzzed can buzz again on next question
+  resetBuzzers();
 }
 
 function choicePicked(letter) {
