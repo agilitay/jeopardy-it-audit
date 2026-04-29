@@ -300,15 +300,27 @@ function setConnStatus(state, text) {
   document.getElementById('conn-label').textContent = text;
 }
 
-function handleBuzz(groupKey) {
+function handleBuzz(raw) {
+  const parts = raw.split(':');
+  const groupKey = parts[0];
+  const displayName = parts[1] || groupKey.replace('G','Group ');
   if (buzzedGroup) return;
   buzzedGroup = groupKey;
-  const label = groupKey.replace('G','Group ');
+  if (displayName) groupNames[groupKey] = displayName;
+  playBuzzIn();
   const ind = document.getElementById('buzz-indicator');
-  ind.textContent = '🔔 ' + label + ' buzzed in!';
+  ind.textContent = '🔔 ' + (groupNames[groupKey]||groupKey.replace('G','Group ')) + ' buzzed in!';
   ind.style.display = 'block';
   if (document.getElementById('q-modal').classList.contains('open')) setBuzzedInModal(groupKey);
   setTimeout(() => { if (!document.getElementById('q-modal').classList.contains('open')) ind.style.display='none'; }, 5000);
+}
+
+function resetBuzzers() {
+  fetch(NTFY_URL, {
+    method: 'POST',
+    body: 'RESET',
+    headers: { 'Content-Type': 'text/plain' }
+  }).catch(()=>{});
 }
 
 function showShareInfo() {
